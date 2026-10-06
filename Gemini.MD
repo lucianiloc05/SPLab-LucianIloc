@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Bookish** is a modular document and book management platform inspired by cloud storage services (like Google Drive). The goal of the project is to build an extensible, maintainable system applying **Design Patterns**, **SOLID principles**, and **Clean Code** practices.
 
-The initial milestones focus on the core domain model for representing documents hierarchically and formatting text dynamically.
+The initial milestones focus on the core domain model for representing documents hierarchically, formatting text dynamically, and lazily loading heavy media resources.
 
 ---
 
@@ -14,6 +14,9 @@ The document structure follows the Gang of Four (GoF) **Composite Pattern** (tra
 
 ### 2.2 The Strategy Pattern
 Text alignment follows the GoF **Strategy Pattern**. A `Paragraph` delegates its rendering to an `AlignStrategy` (`AlignLeft`, `AlignRight`, or `AlignCenter`), with an optional `Context` (representing parameters such as characters per page).
+
+### 2.3 The Proxy Pattern
+Image loading follows the GoF **Proxy Pattern** (Virtual Proxy variant). An `ImageProxy` stands in for an `Image` object implementing the common `Picture` interface. Heavy real image instances are only instantiated lazily on demand when `loadImage()`, `print()`, or `content()` is accessed.
 
 ```mermaid
 classDiagram
@@ -69,8 +72,31 @@ classDiagram
         +print(Context context) void
     }
 
+    class Picture {
+        <<interface>>
+        +url() String
+        +dim() Dimension
+        +content() PictureContent
+    }
+
     class Image {
         -String url
+        -Dimension dim
+        -ImageContent content
+        +url() String
+        +dim() Dimension
+        +content() ImageContent
+        +print() void
+    }
+
+    class ImageProxy {
+        -String url
+        -Dimension dim
+        -Image realImg
+        +loadImage() Image
+        +url() String
+        +dim() Dimension
+        +content() PictureContent
         +print() void
     }
 
@@ -108,8 +134,11 @@ classDiagram
     Element <|.. Section : implements
     Element <|.. TableOfContents : implements
     Element <|.. Paragraph : implements
-    Element <|.. Image : implements
+    Element <|.. Picture : extends
     Element <|.. Table : implements
+    Picture <|.. Image : implements
+    Picture <|.. ImageProxy : implements
+    ImageProxy *-- "1" Image : realImg
     Section o-- "1..*" Element : children
     Paragraph o-- "0..1" AlignStrategy : textAlignment
     AlignStrategy <|.. AlignLeft : implements
@@ -128,7 +157,12 @@ All domain entities reside in package: `org.sp.bookish.entity`
 | [`Element`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Element.java) | **Component** | Declares the common interface for all components in the document tree (`print()`, `add()`, `remove()`, `get()`). Default methods throw `UnsupportedOperationException` for leaf elements. |
 | [`Section`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Section.java) | **Composite** | Represents a structured section / chapter with a title and a list of child `Element` objects. Propagates operations like `print()` recursively to its children. |
 | [`Paragraph`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Paragraph.java) | **Leaf & Context** | Holds text content and an optional `AlignStrategy` reference (`textAlignment`). Delegates rendering to strategy if present. |
-| [`Image`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Image.java) | **Leaf** | Holds an image URL or resource path. |
+| [`Picture`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Picture.java) | **Subject Interface** | Common interface extending `Element` for both real images and image proxies (`url()`, `dim()`, `content()`). |
+| [`Image`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Image.java) | **Real Subject** | Represents real image resource with url, dimensions, and image content. |
+| [`ImageProxy`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/ImageProxy.java) | **Proxy** | Virtual proxy that defers loading of `Image` until needed via `loadImage()`. |
+| [`Dimension`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Dimension.java) | **Value Object** | Holds 2D image dimensions (`width`, `height`). |
+| [`PictureContent`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/PictureContent.java) | **Content Model** | Base class representing picture content. |
+| [`ImageContent`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/ImageContent.java) | **Content Model** | Specific content payload for images. |
 | [`Table`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Table.java) | **Leaf** | Represents tabular data or placeholder content. |
 | [`TableOfContents`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/TableOfContents.java) | **Leaf** | Represents the book / document table of contents. |
 | [`Book`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Book.java) | **Root Entity** | Contains the book's title, authors, and root-level `Element` contents. |
@@ -150,7 +184,9 @@ All domain entities reside in package: `org.sp.bookish.entity`
 3. **Strategy Pattern for Alignment**:
    - Encapsulates text alignment algorithms away from `Paragraph`.
    - Strategies can be interchanged dynamically at runtime using `setTextAlignment` / `setAlignStrategy`.
-4. **Encapsulation & Extensibility**:
+4. **Proxy Pattern for Media**:
+   - `ImageProxy` acts as a surrogate for `Image`. It stores lightweight metadata (`url`, `dim`) without immediately instantiating the real image until `loadImage()`, `content()`, or `print()` is requested.
+5. **Encapsulation & Extensibility**:
    - Standard getters, setters, and constructors are supplied for easy instantiation and serialization.
 
 ---
@@ -173,9 +209,13 @@ p2.setTextAlignment(new AlignCenter());
 Paragraph p3 = new Paragraph("Functions should do one thing.");
 p3.setTextAlignment(new AlignRight());
 
+// Lazy loading image via proxy
+ImageProxy imgProxy = new ImageProxy("clean_code_cover.png", new Dimension(800, 600));
+
 cap1.add(p1);
 cap1.add(p2);
 cap1.add(p3);
+cap1.add(imgProxy);
 
 noSqlBook.add(cap1);
 noSqlBook.print();
@@ -186,6 +226,5 @@ noSqlBook.print();
 ## 6. Future Roadmap
 
 - **Visitor Pattern**: For document serialization, statistics (word count, image count), and rendering.
-- **Proxy Pattern**: Lazy loading of large images or remote assets (`ImageProxy`).
 - **Persistence (JPA/Hibernate)**: When persistence is ready, mapping the composite hierarchy using JPA entities with inheritance strategies.
 - **REST Controller & Drive Services**: Uploading, organizing, and versioning documents in a Google Drive-like API.

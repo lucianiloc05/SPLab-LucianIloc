@@ -1,1 +1,0 @@
-Check the Diagram.png. We are implementing the strategy design pattern so that our paragraph may hold Left, Right AND Center alignments (Not shown in image, but we'll implement it also). The function field context talks about 'characters per page'. Don't worry too much about the implementation 
