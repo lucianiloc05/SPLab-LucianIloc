@@ -1,3 +1,0 @@
-Createa a .MD file, we are creating a project around Design Patterns and clean coding practices.
-
-The project is about a 'Google Drive' type application. Currently we are making a 'Book' storing implementation.
