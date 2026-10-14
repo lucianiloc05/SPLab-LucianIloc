@@ -1,5 +1,7 @@
 package org.sp.bookish.entity;
 
+import org.sp.bookish.visitor.Visitor;
+
 public class Table implements Element {
     private String something;
 
@@ -21,5 +23,10 @@ public class Table implements Element {
     @Override
     public void print() {
         System.out.println("Table: " + something);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
     }
 }

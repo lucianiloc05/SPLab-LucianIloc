@@ -1,5 +1,7 @@
 package org.sp.bookish.entity;
 
+import org.sp.bookish.visitor.Visitor;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,5 +58,10 @@ public class Section implements Element {
         for (Element child : children) {
             child.print();
         }
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
     }
 }

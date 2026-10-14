@@ -1,5 +1,9 @@
 package org.sp.bookish.entity;
 
+import org.sp.bookish.strategy.AlignStrategy;
+import org.sp.bookish.strategy.Context;
+import org.sp.bookish.visitor.Visitor;
+
 public class Paragraph implements Element {
     private String text;
     private AlignStrategy textAlignment;
@@ -55,5 +59,10 @@ public class Paragraph implements Element {
         } else {
             System.out.println("Paragraph: " + text);
         }
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
     }
 }

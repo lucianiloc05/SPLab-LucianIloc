@@ -1,5 +1,7 @@
 package org.sp.bookish.entity;
 
+import org.sp.bookish.visitor.Visitor;
+
 public class ImageProxy implements Picture {
     private String url;
     private Dimension dim;
@@ -81,5 +83,10 @@ public class ImageProxy implements Picture {
 
     public void setRealImage(Image realImage) {
         this.realImg = realImage;
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
     }
 }

@@ -1,5 +1,7 @@
 package org.sp.bookish.entity;
 
+import org.sp.bookish.visitor.Visitor;
+
 public class Image implements Picture {
     private String url;
     private Dimension dim;
@@ -70,5 +72,10 @@ public class Image implements Picture {
     @Override
     public void print() {
         System.out.println("Image with name: " + url);
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
     }
 }
