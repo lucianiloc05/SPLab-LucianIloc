@@ -86,21 +86,33 @@ public class BookishApplication {
             cap1.add(p15);
             cap1.add(table1);
 
+            Section cap2 = new Section("Capitolul 2");
+            cap2.add(new Paragraph("Opening chapter 2 text"));
+            cap2.add(new Paragraph("More chapter 2 text"));
+
             Book book = new Book("My Book");
             book.add(cap1);
+            book.add(cap2);
 
             System.out.println("\n1. BookStatistics:");
             BookStatistics stats = new BookStatistics();
             book.accept(stats);
             stats.printStatistics();
 
-            System.out.println("\n2. GenerateToC:");
+            System.out.println("\n2. GenerateToC (Initial):");
             GenerateToC generateToC = new GenerateToC();
             book.accept(generateToC);
             TableOfContents toc = generateToC.getToC();
             toc.print();
 
-            System.out.println("\n3. RenderContentVisitor:");
+            System.out.println("\n3. GenerateToC (After adding more paragraphs to Chapter 1):");
+            cap1.add(new Paragraph("Extra paragraph in Chapter 1"));
+            GenerateToC generateToC2 = new GenerateToC();
+            book.accept(generateToC2);
+            TableOfContents updatedToc = generateToC2.getToC();
+            updatedToc.print();
+
+            System.out.println("\n4. RenderContentVisitor:");
             RenderContentVisitor renderVisitor = new RenderContentVisitor();
             book.accept(renderVisitor);
 
