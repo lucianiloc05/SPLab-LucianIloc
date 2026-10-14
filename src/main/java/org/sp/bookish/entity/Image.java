@@ -1,5 +1,7 @@
 package org.sp.bookish.entity;
 
+import org.sp.bookish.visitor.Visitor;
+
 public class Image implements Picture {
     private String url;
     private Dimension dim;

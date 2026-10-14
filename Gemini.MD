@@ -206,12 +206,12 @@ classDiagram
 
 ## 3. Package & Class Structure
 
-All domain entities reside in package: `org.sp.bookish.entity`
+### 3.1 Domain Entity Package (`org.sp.bookish.entity`)
 
 | Class / Interface | Role in Pattern | Description |
 | :--- | :--- | :--- |
 | [`Element`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Element.java) | **Component** | Declares the common interface for all components in the document tree (`print()`, `accept()`, `add()`, `remove()`, `get()`). Default methods throw `UnsupportedOperationException` for leaf elements. |
-| [`Section`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Section.java) | **Composite** | Represents a structured section / chapter with a title and a list of child `Element` objects. Propagates operations like `print()` recursively to its children. |
+| [`Section`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Section.java) | **Composite** | Represents a structured section / chapter with a title and a list of child `Element` objects. Propagates operations recursively to its children. |
 | [`Paragraph`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Paragraph.java) | **Leaf & Context** | Holds text content and an optional `AlignStrategy` reference (`textAlignment`). Delegates rendering to strategy if present. |
 | [`Picture`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Picture.java) | **Subject Interface** | Common interface extending `Element` for both real images and image proxies (`url()`, `dim()`, `content()`). |
 | [`Image`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Image.java) | **Real Subject** | Represents real image resource with url, dimensions, and image content. |
@@ -223,15 +223,25 @@ All domain entities reside in package: `org.sp.bookish.entity`
 | [`TableOfContents`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/TableOfContents.java) | **Leaf** | Represents the book / document table of contents. |
 | [`Book`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Book.java) | **Composite & Root Entity** | Extends `Section`, contains the book's title, authors, and root-level `Element` contents. |
 | [`Author`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Author.java) | **Entity** | Holds author identity (`name`, `surname`) and a `print()` method. |
-| [`AlignStrategy`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/AlignStrategy.java) | **Strategy Interface** | Defines the contract for alignment rendering: `render(Paragraph, Context)`. |
-| [`AlignLeft`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/AlignLeft.java) | **Concrete Strategy** | Left alignment rendering strategy. |
-| [`AlignRight`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/AlignRight.java) | **Concrete Strategy** | Right alignment rendering strategy. |
-| [`AlignCenter`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/AlignCenter.java) | **Concrete Strategy** | Center alignment rendering strategy. |
-| [`Context`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Context.java) | **Strategy Context** | Context object holding configuration such as `charactersPerPage`. |
-| [`Visitor`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Visitor.java) | **Visitor Interface** | Contract defining `visit(...)` methods for all element types. |
-| [`RenderContentVisitor`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/RenderContentVisitor.java) | **Concrete Visitor** | Traverses elements to render/print them cleanly. |
-| [`BookStatistics`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/BookStatistics.java) | **Concrete Visitor** | Collects statistics (counts of paragraphs, images, tables) and displays them via `printStatistics()`. |
-| [`GenerateToC`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/GenerateToC.java) | **Concrete Visitor** | Extracts section titles and builds a `TableOfContents` accessible via `getToC()`. |
+
+### 3.2 Strategy Package (`org.sp.bookish.strategy`)
+
+| Class / Interface | Role in Pattern | Description |
+| :--- | :--- | :--- |
+| [`AlignStrategy`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/strategy/AlignStrategy.java) | **Strategy Interface** | Defines the contract for alignment rendering: `render(Paragraph, Context)`. |
+| [`AlignLeft`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/strategy/AlignLeft.java) | **Concrete Strategy** | Left alignment rendering strategy. |
+| [`AlignRight`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/strategy/AlignRight.java) | **Concrete Strategy** | Right alignment rendering strategy. |
+| [`AlignCenter`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/strategy/AlignCenter.java) | **Concrete Strategy** | Center alignment rendering strategy. |
+| [`Context`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/strategy/Context.java) | **Strategy Context** | Context object holding configuration such as `charactersPerPage`. |
+
+### 3.3 Visitor Package (`org.sp.bookish.visitor`)
+
+| Class / Interface | Role in Pattern | Description |
+| :--- | :--- | :--- |
+| [`Visitor`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/visitor/Visitor.java) | **Visitor Interface** | Contract defining `visit(...)` methods for all element types. |
+| [`RenderContentVisitor`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/visitor/RenderContentVisitor.java) | **Concrete Visitor** | Traverses elements to render/print them cleanly. |
+| [`BookStatistics`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/visitor/BookStatistics.java) | **Concrete Visitor** | Collects statistics (counts of paragraphs, images, tables) and displays them via `printStatistics()`. |
+| [`GenerateToC`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/visitor/GenerateToC.java) | **Concrete Visitor** | Extracts section titles and builds a `TableOfContents` accessible via `getToC()`. |
 
 ---
 

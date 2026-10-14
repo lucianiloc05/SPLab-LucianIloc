@@ -1,6 +1,8 @@
 package org.sp.bookish;
 
 import org.sp.bookish.entity.*;
+import org.sp.bookish.strategy.*;
+import org.sp.bookish.visitor.*;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

@@ -1,4 +1,6 @@
-package org.sp.bookish.entity;
+package org.sp.bookish.visitor;
+
+import org.sp.bookish.entity.*;
 
 public interface Visitor {
     void visit(Book book);

@@ -2,6 +2,7 @@ package org.sp.bookish;
 
 import org.junit.jupiter.api.Test;
 import org.sp.bookish.entity.*;
+import org.sp.bookish.visitor.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 

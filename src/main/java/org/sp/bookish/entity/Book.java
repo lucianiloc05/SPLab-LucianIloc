@@ -1,5 +1,7 @@
 package org.sp.bookish.entity;
 
+import org.sp.bookish.visitor.Visitor;
+
 import java.util.ArrayList;
 import java.util.List;
 

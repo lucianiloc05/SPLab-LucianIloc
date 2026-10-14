@@ -1,4 +1,6 @@
-package org.sp.bookish.entity;
+package org.sp.bookish.strategy;
+
+import org.sp.bookish.entity.Paragraph;
 
 public interface AlignStrategy {
     void render(Paragraph paragraph, Context context);

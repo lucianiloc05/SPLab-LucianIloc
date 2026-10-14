@@ -1,4 +1,6 @@
-package org.sp.bookish.entity;
+package org.sp.bookish.visitor;
+
+import org.sp.bookish.entity.*;
 
 public class BookStatistics implements Visitor {
     private int numberOfImages = 0;

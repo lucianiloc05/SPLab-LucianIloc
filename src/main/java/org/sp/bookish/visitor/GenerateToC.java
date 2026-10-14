@@ -1,14 +1,12 @@
-package org.sp.bookish.entity;
+package org.sp.bookish.visitor;
 
-public class RenderContentVisitor implements Visitor {
+import org.sp.bookish.entity.*;
+
+public class GenerateToC implements Visitor {
+    private TableOfContents toc = new TableOfContents();
 
     @Override
     public void visit(Book book) {
-        System.out.println("Book: " + book.getTitle());
-        System.out.println("Authors:");
-        for (Author author : book.getAuthors()) {
-            author.print();
-        }
         for (Element child : book.getChildren()) {
             child.accept(this);
         }
@@ -16,7 +14,9 @@ public class RenderContentVisitor implements Visitor {
 
     @Override
     public void visit(Section section) {
-        System.out.println(section.getTitle());
+        if (section.getTitle() != null) {
+            toc.addEntry(section.getTitle());
+        }
         for (Element child : section.getChildren()) {
             child.accept(this);
         }
@@ -24,26 +24,25 @@ public class RenderContentVisitor implements Visitor {
 
     @Override
     public void visit(TableOfContents tableOfContents) {
-        tableOfContents.print();
     }
 
     @Override
     public void visit(Paragraph paragraph) {
-        paragraph.print();
     }
 
     @Override
     public void visit(ImageProxy imageProxy) {
-        imageProxy.print();
     }
 
     @Override
     public void visit(Image image) {
-        image.print();
     }
 
     @Override
     public void visit(Table table) {
-        table.print();
+    }
+
+    public TableOfContents getToC() {
+        return toc;
     }
 }

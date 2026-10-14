@@ -1,4 +1,4 @@
-package org.sp.bookish.entity;
+package org.sp.bookish.strategy;
 
 public class Context {
     private int charactersPerPage;
