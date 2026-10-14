@@ -61,11 +61,40 @@ class VisitorPatternTest {
         TableOfContents toc = generator.getToC();
         assertNotNull(toc);
         assertEquals(3, toc.getEntries().size());
-        assertTrue(toc.getEntries().contains("Part 1: Introduction"));
-        assertTrue(toc.getEntries().contains("Part 2: Starting with the Components"));
-        assertTrue(toc.getEntries().contains("Chapter 3: Component Cohesion"));
+        assertEquals(3, generator.getEntries().size());
+        assertTrue(toc.getEntries().get(0).contains("Part 1: Introduction") && toc.getEntries().get(0).contains("page 1"));
+        assertTrue(toc.getEntries().get(1).contains("Part 2: Starting with the Components") && toc.getEntries().get(1).contains("page 2"));
+        assertTrue(toc.getEntries().get(2).contains("Chapter 3: Component Cohesion") && toc.getEntries().get(2).contains("page 2"));
 
         assertDoesNotThrow(toc::print);
+    }
+
+    @Test
+    void testDynamicPageNumberingWhenParagraphsAdded() {
+        Book book = new Book("Dynamic Pagination");
+        Section s1 = new Section("Section 1");
+        s1.add(new Paragraph("Paragraph 1.1"));
+
+        Section s2 = new Section("Section 2");
+        s2.add(new Paragraph("Paragraph 2.1"));
+
+        book.add(s1);
+        book.add(s2);
+
+        // Initial generation
+        GenerateToC gen1 = new GenerateToC();
+        book.accept(gen1);
+        assertTrue(gen1.getEntries().get(0).contains("page 1"));
+        assertTrue(gen1.getEntries().get(1).contains("page 2"));
+
+        // Adding 2 more paragraphs to Section 1 should shift Section 2 from page 2 to page 4
+        s1.add(new Paragraph("Paragraph 1.2"));
+        s1.add(new Paragraph("Paragraph 1.3"));
+
+        GenerateToC gen2 = new GenerateToC();
+        book.accept(gen2);
+        assertTrue(gen2.getEntries().get(0).contains("page 1"));
+        assertTrue(gen2.getEntries().get(1).contains("page 4"));
     }
 
     @Test

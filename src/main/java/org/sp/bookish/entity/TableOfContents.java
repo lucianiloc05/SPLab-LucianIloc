@@ -36,6 +36,10 @@ public class TableOfContents implements Element {
         this.entries.add(entry);
     }
 
+    public void addEntry(String title, int page) {
+        addEntry(title + " .......... page " + page);
+    }
+
     @Override
     public void print() {
         if (entries != null && !entries.isEmpty()) {
