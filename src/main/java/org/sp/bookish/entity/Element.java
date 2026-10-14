@@ -2,6 +2,7 @@ package org.sp.bookish.entity;
 
 public interface Element {
     void print();
+    void accept(Visitor visitor);
 
     default void add(Element element) {
         throw new UnsupportedOperationException("add() is not supported on this element");

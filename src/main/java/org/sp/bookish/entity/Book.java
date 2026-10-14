@@ -3,30 +3,20 @@ package org.sp.bookish.entity;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Book {
-    private String title;
+public class Book extends Section {
     private List<Author> authors = new ArrayList<>();
-    private List<Element> elements = new ArrayList<>();
 
     public Book() {
+        super();
     }
 
     public Book(String title) {
-        this.title = title;
+        super(title);
     }
 
     public Book(String title, List<Author> authors, List<Element> elements) {
-        this.title = title;
+        super(title, elements);
         this.authors = authors != null ? authors : new ArrayList<>();
-        this.elements = elements != null ? elements : new ArrayList<>();
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
     }
 
     public List<Author> getAuthors() {
@@ -38,41 +28,35 @@ public class Book {
     }
 
     public List<Element> getElements() {
-        return elements;
+        return getChildren();
     }
 
     public void setElements(List<Element> elements) {
-        this.elements = elements;
+        setChildren(elements);
     }
 
     public void addAuthor(Author author) {
         this.authors.add(author);
     }
 
-    public void add(Element element) {
-        this.elements.add(element);
-    }
-
     public void addContent(Element element) {
-        this.elements.add(element);
+        add(element);
     }
 
-    public void remove(Element element) {
-        this.elements.remove(element);
-    }
-
-    public Element get(int index) {
-        return this.elements.get(index);
-    }
-
+    @Override
     public void print() {
-        System.out.println("Book: " + title);
+        System.out.println("Book: " + getTitle());
         System.out.println("Authors:");
         for (Author author : authors) {
             author.print();
         }
-        for (Element element : elements) {
+        for (Element element : getChildren()) {
             element.print();
         }
+    }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
     }
 }

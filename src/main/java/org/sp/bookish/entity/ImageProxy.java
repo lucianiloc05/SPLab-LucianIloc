@@ -82,4 +82,9 @@ public class ImageProxy implements Picture {
     public void setRealImage(Image realImage) {
         this.realImg = realImage;
     }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 }

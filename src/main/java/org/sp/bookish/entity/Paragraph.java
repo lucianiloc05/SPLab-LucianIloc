@@ -56,4 +56,9 @@ public class Paragraph implements Element {
             System.out.println("Paragraph: " + text);
         }
     }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 }

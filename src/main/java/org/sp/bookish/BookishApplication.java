@@ -64,6 +64,44 @@ public class BookishApplication {
             textSection.add(p3);
             textSection.print();
 
+            // Visitor pattern demonstration
+            System.out.println("\n--- Visitor Pattern Demo ---");
+            Section cap1 = new Section("Capitolul 1");
+            Paragraph p11 = new Paragraph("Moto capitol");
+            cap1.add(p11);
+            Paragraph p12 = new Paragraph("Paragraph 1");
+            cap1.add(p12);
+            Paragraph p13 = new Paragraph("Paragraph 2");
+            cap1.add(p13);
+            Paragraph p14 = new Paragraph("Paragraph 3");
+            cap1.add(p14);
+            ImageProxy img11 = new ImageProxy("ImageOne");
+            Image img12 = new Image("ImageTwo");
+            Paragraph p15 = new Paragraph("Some text");
+            Table table1 = new Table("Table 1");
+            cap1.add(img11);
+            cap1.add(img12);
+            cap1.add(p15);
+            cap1.add(table1);
+
+            Book book = new Book("My Book");
+            book.add(cap1);
+
+            System.out.println("\n1. BookStatistics:");
+            BookStatistics stats = new BookStatistics();
+            book.accept(stats);
+            stats.printStatistics();
+
+            System.out.println("\n2. GenerateToC:");
+            GenerateToC generateToC = new GenerateToC();
+            book.accept(generateToC);
+            TableOfContents toc = generateToC.getToC();
+            toc.print();
+
+            System.out.println("\n3. RenderContentVisitor:");
+            RenderContentVisitor renderVisitor = new RenderContentVisitor();
+            book.accept(renderVisitor);
+
             System.out.println("======================================");
         };
     }

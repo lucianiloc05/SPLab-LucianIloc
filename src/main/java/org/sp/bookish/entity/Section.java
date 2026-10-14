@@ -57,4 +57,9 @@ public class Section implements Element {
             child.print();
         }
     }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 }

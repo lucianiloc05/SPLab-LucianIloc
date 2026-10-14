@@ -71,4 +71,9 @@ public class Image implements Picture {
     public void print() {
         System.out.println("Image with name: " + url);
     }
+
+    @Override
+    public void accept(Visitor visitor) {
+        visitor.visit(this);
+    }
 }
