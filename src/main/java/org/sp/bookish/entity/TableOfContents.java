@@ -1,15 +1,23 @@
 package org.sp.bookish.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
 import org.sp.bookish.visitor.Visitor;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class TableOfContents implements Element {
+@Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+public class TableOfContents extends BaseElement {
     private String something;
+
+    @ElementCollection
     private List<String> entries = new ArrayList<>();
 
     public TableOfContents() {
+        super();
     }
 
     public TableOfContents(String something) {

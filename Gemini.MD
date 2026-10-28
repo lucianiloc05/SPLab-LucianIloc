@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Bookish** is a modular document and book management platform inspired by cloud storage services (like Google Drive). The goal of the project is to build an extensible, maintainable system applying **Design Patterns**, **SOLID principles**, and **Clean Code** practices.
 
-The initial milestones focus on the core domain model for representing documents hierarchically, formatting text dynamically, lazily loading heavy media resources, and traversing document elements using the Visitor pattern.
+The milestones cover hierarchical document modeling (Composite), dynamic text formatting (Strategy), lazy media resource loading (Proxy), extensible document traversal (Visitor), Spring Data JPA persistence with polymorphic entity hierarchy, data access abstraction (Adapter), and request encapsulation (Command).
 
 ---
 
@@ -24,6 +24,12 @@ Document traversal and operations follow the GoF **Visitor Pattern**. Each `Elem
 - **`BookStatistics`**: Accumulates element counts (paragraphs, images, tables, sections, books) and provides `printStatistics()`.
 - **`GenerateToC`**: Extracts section titles into a `TableOfContents` accessible via `getToC()`.
 
+### 2.5 The Adapter Pattern
+Persistence abstraction follows the GoF **Adapter Pattern**. Instead of tightly coupling controllers and command services directly to Spring Data's `BooksRepository`, an abstraction interface [`CrudRepository`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/CrudRepository.java) sits in between, implemented via [`BooksRepositoryAdapter`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/BooksRepositoryAdapter.java) and [`AuthorsRepositoryAdapter`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/AuthorsRepositoryAdapter.java).
+
+### 2.6 The Command Pattern
+Business operations triggered by controllers follow the GoF **Command Pattern**. Each request encapsulates execution logic inside command objects (`CreateBookCommand`, `GetAllBooksCommand`, `GetBookByIdCommand`, `UpdateBookCommand`, `DeleteBookCommand`) with state shared via [`CommandContext`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/CommandContext.java).
+
 ```mermaid
 classDiagram
     direction TB
@@ -32,9 +38,16 @@ classDiagram
         <<interface>>
         +print() void
         +accept(Visitor visitor) void
+        +getId() Integer
         +add(Element element) void
         +remove(Element element) void
         +get(int index) Element
+    }
+
+    class BaseElement {
+        -Integer id
+        +getId() Integer
+        +setId(Integer id) void
     }
 
     class Book {
@@ -48,6 +61,7 @@ classDiagram
     }
 
     class Author {
+        -Integer id
         -String name
         -String surname
         +print() void
@@ -120,86 +134,73 @@ classDiagram
         +accept(Visitor visitor) void
     }
 
-    class Context {
-        -int charactersPerPage
-        +getCharactersPerPage() int
-        +setCharactersPerPage(int charactersPerPage) void
-    }
-
-    class AlignStrategy {
+    class BooksRepository {
         <<interface>>
-        +render(Paragraph paragraph, Context context) void
-        +render(Paragraph paragraph) void
     }
 
-    class AlignLeft {
-        +render(Paragraph paragraph, Context context) void
-    }
-
-    class AlignRight {
-        +render(Paragraph paragraph, Context context) void
-    }
-
-    class AlignCenter {
-        +render(Paragraph paragraph, Context context) void
-    }
-
-    class Visitor {
+    class CrudRepository~T, ID~ {
         <<interface>>
-        +visit(Book book) void
-        +visit(Section section) void
-        +visit(TableOfContents tableOfContents) void
-        +visit(Paragraph paragraph) void
-        +visit(ImageProxy imageProxy) void
-        +visit(Table table) void
-        +visit(Image image) void
+        +save(T entity) T
+        +findById(ID id) Optional~T~
+        +findAll() List~T~
+        +deleteById(ID id) void
+        +existsById(ID id) boolean
     }
 
-    class RenderContentVisitor {
-        +visit(Book book) void
-        +visit(Section section) void
-        +visit(TableOfContents tableOfContents) void
-        +visit(Paragraph paragraph) void
-        +visit(ImageProxy imageProxy) void
-        +visit(Table table) void
-        +visit(Image image) void
+    class BooksRepositoryAdapter {
+        -BooksRepository booksRepository
+        +save(Book entity) Book
+        +findById(Integer id) Optional~Book~
+        +findAll() List~Book~
+        +deleteById(Integer id) void
     }
 
-    class BookStatistics {
-        -int numberOfImages
-        -int numberOfTables
-        -int numberOfParagraphs
-        -int numberOfBooks
-        -int numberOfSections
-        +printStatistics() void
-        +getNumberOfImages() int
-        +getNumberOfTables() int
-        +getNumberOfParagraphs() int
+    class Command~T~ {
+        <<interface>>
+        +execute() T
     }
 
-    class GenerateToC {
-        -TableOfContents toc
-        +getToC() TableOfContents
+    class CommandContext {
+        -CrudRepository~Book, Integer~ booksRepository
+        +getBooksRepository() CrudRepository
+        +setBooksRepository(CrudRepository repo) void
     }
 
+    class CreateBookCommand {
+        -CommandContext context
+        -Book book
+        +execute() Book
+    }
+
+    class BooksController {
+        -CrudRepository~Book, Integer~ booksRepository
+        -CommandContext commandContext
+        +getAll() ResponseEntity
+        +getById(Integer id) ResponseEntity
+        +create(Book book) ResponseEntity
+        +update(Integer id, Book book) ResponseEntity
+        +delete(Integer id) ResponseEntity
+    }
+
+    Element <|.. BaseElement : implements
+    BaseElement <|-- Section : extends
+    BaseElement <|-- Paragraph : extends
+    BaseElement <|-- Table : extends
+    BaseElement <|-- TableOfContents : extends
+    BaseElement <|-- Image : extends
+    BaseElement <|-- ImageProxy : extends
     Section <|-- Book : extends
     Book o-- "0..*" Author : authors
-    Element <|.. Section : implements
-    Element <|.. TableOfContents : implements
-    Element <|.. Paragraph : implements
-    Element <|.. Picture : extends
-    Element <|.. Table : implements
     Picture <|.. Image : implements
     Picture <|.. ImageProxy : implements
-    ImageProxy *-- "1" Image : realImg
-    Section o-- "1..*" Element : children
-    Paragraph o-- "0..1" AlignStrategy : textAlignment
-    AlignStrategy <|.. AlignLeft : implements
-    AlignStrategy <|.. AlignRight : implements
-    AlignStrategy <|.. AlignCenter : implements
-    Visitor <|.. RenderContentVisitor : implements
-    Visitor <|.. BookStatistics : implements
-    Visitor <|.. GenerateToC : implements
+    ImageProxy *-- "0..1" Image : realImg
+    Section o-- "0..*" Element : children
+    CrudRepository <|.. BooksRepositoryAdapter : implements
+    BooksRepositoryAdapter o-- "1" BooksRepository : adapts
+    Command <|.. CreateBookCommand : implements
+    CreateBookCommand o-- "1" CommandContext : context
+    BooksController o-- "1" CommandContext : uses
+    BooksController o-- "1" CrudRepository : uses
 ```
 
 ---
@@ -210,19 +211,20 @@ classDiagram
 
 | Class / Interface | Role in Pattern | Description |
 | :--- | :--- | :--- |
-| [`Element`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Element.java) | **Component** | Declares the common interface for all components in the document tree (`print()`, `accept()`, `add()`, `remove()`, `get()`). Default methods throw `UnsupportedOperationException` for leaf elements. |
-| [`Section`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Section.java) | **Composite** | Represents a structured section / chapter with a title and a list of child `Element` objects. Propagates operations recursively to its children. |
-| [`Paragraph`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Paragraph.java) | **Leaf & Context** | Holds text content and an optional `AlignStrategy` reference (`textAlignment`). Delegates rendering to strategy if present. |
-| [`Picture`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Picture.java) | **Subject Interface** | Common interface extending `Element` for both real images and image proxies (`url()`, `dim()`, `content()`). |
-| [`Image`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Image.java) | **Real Subject** | Represents real image resource with url, dimensions, and image content. |
-| [`ImageProxy`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/ImageProxy.java) | **Proxy** | Virtual proxy that defers loading of `Image` until needed via `loadImage()`. |
-| [`Dimension`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Dimension.java) | **Value Object** | Holds 2D image dimensions (`width`, `height`). |
+| [`Element`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Element.java) | **Component** | Declares common interface for all components in the document tree (`print()`, `accept()`, `getId()`, `add()`, `remove()`, `get()`). Default methods throw `UnsupportedOperationException` for leaf elements. |
+| [`BaseElement`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/BaseElement.java) | **Entity Superclass** | Root entity for JPA `JOINED` inheritance hierarchy, holds primary key `@Id @GeneratedValue(strategy = GenerationType.IDENTITY)`. |
+| [`Section`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Section.java) | **Composite & Entity** | Represents a structured section with title and child elements mapped via `@OneToMany(targetEntity = BaseElement.class, cascade = CascadeType.ALL)`. |
+| [`Paragraph`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Paragraph.java) | **Leaf & Entity** | Holds text and transient `AlignStrategy`. |
+| [`Picture`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Picture.java) | **Subject Interface** | Common interface extending `Element` for images and proxies. |
+| [`Image`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Image.java) | **Real Subject & Entity** | Real image resource with url and embedded dimension. |
+| [`ImageProxy`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/ImageProxy.java) | **Proxy & Entity** | Virtual proxy that defers loading of `Image` with transient `realImg`. |
+| [`Dimension`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Dimension.java) | **Embeddable Value Object** | Holds 2D image dimensions (`width`, `height`). |
 | [`PictureContent`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/PictureContent.java) | **Content Model** | Base class representing picture content. |
 | [`ImageContent`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/ImageContent.java) | **Content Model** | Specific content payload for images. |
-| [`Table`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Table.java) | **Leaf** | Represents tabular data or placeholder content. |
-| [`TableOfContents`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/TableOfContents.java) | **Leaf** | Represents the book / document table of contents. |
-| [`Book`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Book.java) | **Composite & Root Entity** | Extends `Section`, contains the book's title, authors, and root-level `Element` contents. |
-| [`Author`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Author.java) | **Entity** | Holds author identity (`name`, `surname`) and a `print()` method. |
+| [`Table`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Table.java) | **Leaf & Entity** | Tabular data element persisted in `@Table(name = "book_tables")`. |
+| [`TableOfContents`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/TableOfContents.java) | **Leaf & Entity** | Document table of contents with element collection entries. |
+| [`Book`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Book.java) | **Composite & Root Entity** | Extends `Section`, contains authors mapped via `@ManyToMany(cascade = CascadeType.ALL)`. |
+| [`Author`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/entity/Author.java) | **Entity** | Holds author identity (`name`, `surname`) and generated ID. |
 
 ### 3.2 Strategy Package (`org.sp.bookish.strategy`)
 
@@ -243,73 +245,76 @@ classDiagram
 | [`BookStatistics`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/visitor/BookStatistics.java) | **Concrete Visitor** | Collects statistics (counts of paragraphs, images, tables) and displays them via `printStatistics()`. |
 | [`GenerateToC`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/visitor/GenerateToC.java) | **Concrete Visitor** | Extracts section titles with dynamic page numbering (1 page per visited element) and builds a `TableOfContents` accessible via `getToC()`. |
 
+### 3.4 Persistence Package (`org.sp.bookish.persistence`)
+
+| Class / Interface | Role in Pattern | Description |
+| :--- | :--- | :--- |
+| [`BooksRepository`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/BooksRepository.java) | **Spring Data Repository (Adaptee)** | Spring Data JPA repository for persisting `Book` and the whole `BaseElement` hierarchy. |
+| [`AuthorsRepository`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/AuthorsRepository.java) | **Spring Data Repository (Adaptee)** | Spring Data JPA repository for `Author` entities. |
+| [`AuthorRepository`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/AuthorRepository.java) | **Spring Data Repository** | Extended alias for `AuthorsRepository`. |
+| [`CrudRepository`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/CrudRepository.java) | **Target Interface** | Clean persistence abstraction interface for upper layers (`save`, `findById`, `findAll`, `deleteById`, `existsById`). |
+| [`BooksRepositoryAdapter`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/BooksRepositoryAdapter.java) | **Adapter** | Adapts Spring Data `BooksRepository` to `CrudRepository<Book, Integer>`. |
+| [`AuthorsRepositoryAdapter`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/persistence/AuthorsRepositoryAdapter.java) | **Adapter** | Adapts Spring Data `AuthorsRepository` to `CrudRepository<Author, Integer>`. |
+
+### 3.5 Commands Package (`org.sp.bookish.commands`)
+
+| Class / Interface | Role in Pattern | Description |
+| :--- | :--- | :--- |
+| [`Command`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/Command.java) | **Command Interface** | Generic command interface declaring `T execute()`. |
+| [`CommandContext`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/CommandContext.java) | **Command Context** | Shared context holding repository dependencies for command execution. |
+| [`CreateBookCommand`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/CreateBookCommand.java) | **Concrete Command** | Encapsulates creating and persisting a new `Book`. |
+| [`GetAllBooksCommand`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/GetAllBooksCommand.java) | **Concrete Command** | Encapsulates retrieving all books. |
+| [`GetBookByIdCommand`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/GetBookByIdCommand.java) | **Concrete Command** | Encapsulates finding a book by ID. |
+| [`UpdateBookCommand`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/UpdateBookCommand.java) | **Concrete Command** | Encapsulates updating an existing book. |
+| [`DeleteBookCommand`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/DeleteBookCommand.java) | **Concrete Command** | Encapsulates deleting a book by ID. |
+
+### 3.6 Controllers & Dependency Injection (`org.sp.bookish.controllers`, `org.sp.bookish.difexample`)
+
+| Class / Interface | Role in Pattern | Description |
+| :--- | :--- | :--- |
+| [`BooksController`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/controllers/BooksController.java) | **REST Controller** | Exposes REST endpoints (`/books`, `/books/{id}`) mapping HTTP verbs to commands. |
+| [`HelloController`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/controllers/HelloController.java) | **REST Controller** | Exposes root endpoint (`/`) and demonstrates constructor injection of `SingletonComponent`. |
+| [`SingletonComponent`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/difexample/SingletonComponent.java) | **Singleton Component** | Spring `@Component` representing a singleton bean managed by the Spring DI container. |
+
 ---
 
 ## 4. Design Decisions
 
-1. **Simplicity First (No SQL / JPA for now)**:
-   - Domain models are pure Java POJOs, keeping them easily testable and decoupled from persistence mechanisms.
-2. **Transparent Composite**:
-   - `Element` interface provides default implementations for `add`, `remove`, and `get` that throw `UnsupportedOperationException`. Leaf classes don't need redundant stub implementations, while `Section` and `Book` override them.
-3. **Strategy Pattern for Alignment**:
-   - Encapsulates text alignment algorithms away from `Paragraph`.
-   - Strategies can be interchanged dynamically at runtime using `setTextAlignment` / `setAlignStrategy`.
-4. **Proxy Pattern for Media**:
-   - `ImageProxy` acts as a surrogate for `Image`. It stores lightweight metadata (`url`, `dim`) without immediately instantiating the real image until `loadImage()`, `content()`, or `print()` is requested.
-5. **Visitor Pattern for Extensible Operations**:
-   - `Element.accept(Visitor)` implements double dispatch, allowing operations (like statistics, rendering, ToC generation) to be defined separately without modifying the core element classes.
-6. **Encapsulation & Extensibility**:
-   - Standard getters, setters, and constructors are supplied for easy instantiation and serialization.
+1. **JPA Joined Table Inheritance**:
+   - `BaseElement` serves as the root `@Entity` with `InheritanceType.JOINED`. Derived classes (`Section`, `Book`, `Paragraph`, `Table`, `Image`, `ImageProxy`, `TableOfContents`) keep dedicated tables cleanly joined to `BaseElement`.
+2. **Transparent Composite Persistence**:
+   - Composite collections (`Section.children`) use `@OneToMany(targetEntity = BaseElement.class, cascade = CascadeType.ALL)` to persist nested document trees recursively.
+3. **Lazy Proxy Handling & Serialization Protection**:
+   - `@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})` prevents Jackson serialization errors on Hibernate ByteBuddy proxies.
+   - Virtual proxy fields like `ImageProxy.realImg` and `Paragraph.textAlignment` are `@Transient` and `@JsonIgnore` to prevent premature instantiation or mapping errors.
+4. **Adapter Pattern for Repository Abstraction**:
+   - Controller and Command layers depend on `CrudRepository` rather than concrete Spring Data interfaces, enabling decoupling and pluggable storage backends.
+5. **Command Pattern for Controller Request Handling**:
+   - Each endpoint instantiates and executes a command passing `CommandContext`, keeping controllers lightweight and actions testable and modular.
 
 ---
 
 ## 5. Usage Example
 
 ```java
+// Saving a composite book with authors and nested sections
+Book book = new Book("Clean Architecture");
 Author author = new Author("Robert", "Martin");
-Book noSqlBook = new Book("Clean Code");
-noSqlBook.addAuthor(author);
+book.addAuthor(author);
 
-Section cap1 = new Section("Chapter 1: Clean Code");
+Section section = new Section("Part 1: Introduction");
+section.add(new Paragraph("Architecture overview."));
+section.add(new ImageProxy("architecture.png", new Dimension(800, 600)));
+book.add(section);
 
-Paragraph p1 = new Paragraph("Writing clean code is what you must do...");
-p1.setTextAlignment(new AlignLeft());
-
-Paragraph p2 = new Paragraph("Names should reveal intent.");
-p2.setTextAlignment(new AlignCenter());
-
-Paragraph p3 = new Paragraph("Functions should do one thing.");
-p3.setTextAlignment(new AlignRight());
-
-// Lazy loading image via proxy
-ImageProxy imgProxy = new ImageProxy("clean_code_cover.png", new Dimension(800, 600));
-
-cap1.add(p1);
-cap1.add(p2);
-cap1.add(p3);
-cap1.add(imgProxy);
-
-noSqlBook.add(cap1);
-
-// 1. Statistics visitor
-BookStatistics stats = new BookStatistics();
-noSqlBook.accept(stats);
-stats.printStatistics();
-
-// 2. ToC generator visitor
-GenerateToC tocGen = new GenerateToC();
-noSqlBook.accept(tocGen);
-TableOfContents toc = tocGen.getToC();
-toc.print();
-
-// 3. Render content visitor
-RenderContentVisitor renderer = new RenderContentVisitor();
-noSqlBook.accept(renderer);
+// Via Command pattern & Repository adapter
+CommandContext context = new CommandContext(booksRepositoryAdapter);
+CreateBookCommand createCmd = new CreateBookCommand(context, book);
+Book savedBook = createCmd.execute();
 ```
 
 ---
 
 ## 6. Future Roadmap
 
-- **Persistence (JPA/Hibernate)**: When persistence is ready, mapping the composite hierarchy using JPA entities with inheritance strategies.
 - **REST Controller & Drive Services**: Uploading, organizing, and versioning documents in a Google Drive-like API.

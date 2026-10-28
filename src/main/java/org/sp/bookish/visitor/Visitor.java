@@ -12,4 +12,7 @@ public interface Visitor {
 
     default void visit(Image image) {
     }
+
+    default void visit(BaseElement baseElement) {
+    }
 }
