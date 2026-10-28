@@ -1,13 +1,25 @@
 package org.sp.bookish.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Transient;
 import org.sp.bookish.visitor.Visitor;
 
-public class ImageProxy implements Picture {
+@Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+public class ImageProxy extends BaseElement implements Picture {
     private String url;
+
+    @Embedded
     private Dimension dim;
+
+    @Transient
     private Image realImg;
 
     public ImageProxy() {
+        super();
     }
 
     public ImageProxy(String url) {
@@ -65,10 +77,12 @@ public class ImageProxy implements Picture {
     }
 
     @Override
+    @JsonIgnore
     public PictureContent getContent() {
         return content();
     }
 
+    @JsonIgnore
     public Image getRealImg() {
         return realImg;
     }
@@ -77,6 +91,7 @@ public class ImageProxy implements Picture {
         this.realImg = realImg;
     }
 
+    @JsonIgnore
     public Image getRealImage() {
         return realImg;
     }

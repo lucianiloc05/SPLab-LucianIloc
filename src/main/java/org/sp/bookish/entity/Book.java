@@ -1,11 +1,20 @@
 package org.sp.bookish.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.ManyToMany;
 import org.sp.bookish.visitor.Visitor;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Book extends Section {
+
+    @ManyToMany(cascade = CascadeType.ALL)
     private List<Author> authors = new ArrayList<>();
 
     public Book() {
@@ -26,9 +35,10 @@ public class Book extends Section {
     }
 
     public void setAuthors(List<Author> authors) {
-        this.authors = authors;
+        this.authors = authors != null ? authors : new ArrayList<>();
     }
 
+    @JsonIgnore
     public List<Element> getElements() {
         return getChildren();
     }

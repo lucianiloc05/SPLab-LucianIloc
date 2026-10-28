@@ -1,15 +1,24 @@
 package org.sp.bookish.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
 import org.sp.bookish.visitor.Visitor;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Section implements Element {
+@Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+public class Section extends BaseElement {
     private String title;
+
+    @OneToMany(targetEntity = BaseElement.class, cascade = CascadeType.ALL)
     private List<Element> children = new ArrayList<>();
 
     public Section() {
+        super();
     }
 
     public Section(String title) {

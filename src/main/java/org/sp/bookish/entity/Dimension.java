@@ -1,5 +1,8 @@
 package org.sp.bookish.entity;
 
+import jakarta.persistence.Embeddable;
+
+@Embeddable
 public class Dimension {
     private int width;
     private int height;

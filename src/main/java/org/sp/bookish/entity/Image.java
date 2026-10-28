@@ -1,13 +1,24 @@
 package org.sp.bookish.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import jakarta.persistence.Embedded;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Transient;
 import org.sp.bookish.visitor.Visitor;
 
-public class Image implements Picture {
+@Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+public class Image extends BaseElement implements Picture {
     private String url;
+
+    @Embedded
     private Dimension dim;
+
+    @Transient
     private ImageContent content;
 
     public Image() {
+        super();
     }
 
     public Image(String url) {

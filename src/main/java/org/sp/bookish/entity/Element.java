@@ -6,6 +6,13 @@ public interface Element {
     void print();
     void accept(Visitor visitor);
 
+    default Integer getId() {
+        return null;
+    }
+
+    default void setId(Integer id) {
+    }
+
     default void add(Element element) {
         throw new UnsupportedOperationException("add() is not supported on this element");
     }
