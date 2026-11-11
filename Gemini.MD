@@ -3,7 +3,7 @@
 ## 1. Project Overview
 **Bookish** is a modular document and book management platform inspired by cloud storage services (like Google Drive). The goal of the project is to build an extensible, maintainable system applying **Design Patterns**, **SOLID principles**, and **Clean Code** practices.
 
-The milestones cover hierarchical document modeling (Composite), dynamic text formatting (Strategy), lazy media resource loading (Proxy), extensible document traversal (Visitor), Spring Data JPA persistence with polymorphic entity hierarchy, data access abstraction (Adapter), and request encapsulation (Command).
+The milestones cover hierarchical document modeling (Composite), dynamic text formatting (Strategy), lazy media resource loading (Proxy), extensible document traversal (Visitor), Spring Data JPA persistence with polymorphic entity hierarchy, data access abstraction (Adapter), request encapsulation (Command), and push-notification event streaming (Observer with Server-Sent Events).
 
 ---
 
@@ -29,6 +29,9 @@ Persistence abstraction follows the GoF **Adapter Pattern**. Instead of tightly 
 
 ### 2.6 The Command Pattern
 Business operations triggered by controllers follow the GoF **Command Pattern**. Each request encapsulates execution logic inside command objects (`CreateBookCommand`, `GetAllBooksCommand`, `GetBookByIdCommand`, `UpdateBookCommand`, `DeleteBookCommand`) with state shared via [`CommandContext`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/commands/CommandContext.java).
+
+### 2.7 The Observer Pattern & Server-Sent Events (SSE)
+Real-time push notifications follow the GoF **Observer Pattern**. A central subject [`AllBooksSubject`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/observer/AllBooksSubject.java) maintains active observers and notifies them when a new `Book` is created. [`SseObserver`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/observer/SseObserver.java) implements [`Observer`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/observer/Observer.java) and pushes JSON representations through Spring's `SseEmitter` to clients listening on the `/books-sse` stream.
 
 ```mermaid
 classDiagram
@@ -175,11 +178,47 @@ classDiagram
     class BooksController {
         -CrudRepository~Book, Integer~ booksRepository
         -CommandContext commandContext
+        -AllBooksSubject allBooksSubject
         +getAll() ResponseEntity
         +getById(Integer id) ResponseEntity
         +create(Book book) ResponseEntity
         +update(Integer id, Book book) ResponseEntity
         +delete(Integer id) ResponseEntity
+        +newBook(NewBookRequest request) String
+    }
+
+    class BooksSseController {
+        -AllBooksSubject allBooksSubject
+        +getBooksSse() ResponseBodyEmitter
+    }
+
+    class Subject {
+        <<interface>>
+        +registerObserver(Observer observer) void
+        +unregisterObserver(Observer observer) void
+        +notifyObservers() void
+    }
+
+    class Observer {
+        <<interface>>
+        +update(Book book) void
+        +update() void
+    }
+
+    class AllBooksSubject {
+        -List~Observer~ observerCollection
+        -List~Book~ books
+        -Book latestBook
+        +registerObserver(Observer observer) void
+        +unregisterObserver(Observer observer) void
+        +notifyObservers() void
+        +notifyObservers(Book book) void
+        +add(Book book) void
+    }
+
+    class SseObserver {
+        -SseEmitter emitter
+        +update(Book book) void
     }
 
     Element <|.. BaseElement : implements
@@ -201,6 +240,11 @@ classDiagram
     CreateBookCommand o-- "1" CommandContext : context
     BooksController o-- "1" CommandContext : uses
     BooksController o-- "1" CrudRepository : uses
+    BooksController o-- "1" AllBooksSubject : notifies
+    BooksSseController o-- "1" AllBooksSubject : registers
+    Subject <|.. AllBooksSubject : implements
+    Observer <|.. SseObserver : implements
+    AllBooksSubject o-- "0..*" Observer : observerCollection
 ```
 
 ---
@@ -272,9 +316,20 @@ classDiagram
 
 | Class / Interface | Role in Pattern | Description |
 | :--- | :--- | :--- |
-| [`BooksController`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/controllers/BooksController.java) | **REST Controller** | Exposes REST endpoints (`/books`, `/books/{id}`) mapping HTTP verbs to commands. |
+| [`BooksController`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/controllers/BooksController.java) | **REST Controller** | Exposes REST endpoints (`/books`, `/books/{id}`) mapping HTTP verbs to commands and notifying observers on book creation. |
+| [`BooksSseController`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/controllers/BooksSseController.java) | **SSE Controller** | Exposes `/books-sse` stream attaching client `SseObserver` to `AllBooksSubject`. |
+| [`NewBookRequest`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/controllers/NewBookRequest.java) | **Request DTO** | Encapsulates request payload for new book creation. |
 | [`HelloController`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/controllers/HelloController.java) | **REST Controller** | Exposes root endpoint (`/`) and demonstrates constructor injection of `SingletonComponent`. |
 | [`SingletonComponent`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/difexample/SingletonComponent.java) | **Singleton Component** | Spring `@Component` representing a singleton bean managed by the Spring DI container. |
+
+### 3.7 Observer Package (`org.sp.bookish.observer`)
+
+| Class / Interface | Role in Pattern | Description |
+| :--- | :--- | :--- |
+| [`Subject`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/observer/Subject.java) | **Subject Interface** | Contract for observer registration, unregistration, and notifications. |
+| [`Observer`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/observer/Observer.java) | **Observer Interface** | Contract for observers listening to updates (`update(Book)`). |
+| [`AllBooksSubject`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/observer/AllBooksSubject.java) | **Concrete Subject** | Singleton `@Component` managing observers and notifying them of new books. |
+| [`SseObserver`](file:///D:/Lucian/Java/Bookish/src/main/java/org/sp/bookish/observer/SseObserver.java) | **Concrete Observer** | Pushes serialized JSON books through Spring's `SseEmitter` to HTTP clients. |
 
 ---
 
@@ -291,6 +346,8 @@ classDiagram
    - Controller and Command layers depend on `CrudRepository` rather than concrete Spring Data interfaces, enabling decoupling and pluggable storage backends.
 5. **Command Pattern for Controller Request Handling**:
    - Each endpoint instantiates and executes a command passing `CommandContext`, keeping controllers lightweight and actions testable and modular.
+6. **Observer Pattern with Server-Sent Events (SSE)**:
+   - Clients establish persistent SSE connections via `BooksSseController`, registering `SseObserver` with `AllBooksSubject`. Creating books via `BooksController` notifies registered observers and pushes real-time JSON payloads to browser clients. CORS is configured globally via `corsConfigurer` bean in `BookishApplication`.
 
 ---
 

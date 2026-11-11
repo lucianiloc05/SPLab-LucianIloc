@@ -2,6 +2,7 @@ package org.sp.bookish.controllers;
 
 import org.sp.bookish.commands.*;
 import org.sp.bookish.entity.Book;
+import org.sp.bookish.observer.AllBooksSubject;
 import org.sp.bookish.persistence.BooksRepository;
 import org.sp.bookish.persistence.BooksRepositoryAdapter;
 import org.sp.bookish.persistence.CrudRepository;
@@ -19,9 +20,12 @@ public class BooksController {
 
     private final CrudRepository<Book, Integer> booksRepository;
     private final CommandContext commandContext;
+    private final AllBooksSubject allBooksSubject;
 
     @Autowired
-    public BooksController(CrudRepository<Book, Integer> booksRepository, @Autowired(required = false) CommandContext commandContext) {
+    public BooksController(CrudRepository<Book, Integer> booksRepository,
+                           @Autowired(required = false) CommandContext commandContext,
+                           @Autowired(required = false) AllBooksSubject allBooksSubject) {
         this.booksRepository = booksRepository;
         if (commandContext != null) {
             this.commandContext = commandContext;
@@ -29,10 +33,15 @@ public class BooksController {
         } else {
             this.commandContext = new CommandContext(booksRepository);
         }
+        this.allBooksSubject = allBooksSubject != null ? allBooksSubject : new AllBooksSubject();
     }
 
     public BooksController(BooksRepository booksRepository) {
-        this(new BooksRepositoryAdapter(booksRepository), null);
+        this(new BooksRepositoryAdapter(booksRepository), null, new AllBooksSubject());
+    }
+
+    public BooksController(BooksRepository booksRepository, AllBooksSubject allBooksSubject) {
+        this(new BooksRepositoryAdapter(booksRepository), null, allBooksSubject);
     }
 
     @GetMapping
@@ -59,11 +68,39 @@ public class BooksController {
     @PostMapping
     public ResponseEntity<Book> create(@RequestBody(required = false) Book book) {
         Book savedBook = new CreateBookCommand(commandContext, book).execute();
+        if (allBooksSubject != null && savedBook != null) {
+            allBooksSubject.add(savedBook);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(savedBook);
     }
 
     public ResponseEntity<Book> createBook(Book book) {
         return create(book);
+    }
+
+    public Book createBook(NewBookRequest newBookRequest) {
+        Book book = new Book();
+        if (newBookRequest != null) {
+            book.setTitle(newBookRequest.getTitle());
+        }
+        return book;
+    }
+
+    public String newBook(NewBookRequest newBookRequest) {
+        Book book = createBook(newBookRequest);
+        book = booksRepository.save(book);
+        if (allBooksSubject != null) {
+            allBooksSubject.add(book);
+        }
+        return "Book saved [" + (book != null ? book.getId() : "") + "] " + (book != null ? book.getTitle() : "");
+    }
+
+    public String newBook(Book book) {
+        Book saved = booksRepository.save(book);
+        if (allBooksSubject != null) {
+            allBooksSubject.add(saved);
+        }
+        return "Book saved [" + (saved != null ? saved.getId() : "") + "] " + (saved != null ? saved.getTitle() : "");
     }
 
     @PutMapping("/{id}")
@@ -96,5 +133,9 @@ public class BooksController {
 
     public CrudRepository<Book, Integer> getBooksRepository() {
         return booksRepository;
+    }
+
+    public AllBooksSubject getAllBooksSubject() {
+        return allBooksSubject;
     }
 }
